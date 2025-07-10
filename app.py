@@ -6,7 +6,7 @@ from routes import routes
 
 # Carga variables de entorno desde .env si está local
 load_dotenv()
-
+print("DATABASE_URL:", os.getenv("DATABASE_URL")) 
 # Debug: imprime la URL de la base de datos
 raw_uri = os.getenv("DATABASE_URL")
 print("DATABASE_URL (original):", raw_uri)
