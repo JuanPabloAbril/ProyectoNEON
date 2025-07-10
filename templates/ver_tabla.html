@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Tabla {{ nombre_tabla }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Tabla: {{ nombre_tabla }}</h2>
+        <a href="{{ url_for('routes.index') }}" class="btn btn-secondary">Volver al inicio</a>
+    </div>
+
+    {% if solo_lectura %}
+        <div class="alert alert-info">
+            Esta es una vista de solo lectura. No puedes editar, eliminar ni crear registros.
+        </div>
+    {% endif %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Filtros -->
+    <form method="get" class="mb-4">
+        <div class="row g-2">
+            {% for col in columnas %}
+                <div class="col">
+                    <input type="text" class="form-control" name="{{ col }}" placeholder="Filtrar {{ col }}"
+                           value="{{ request.args.get(col, '') }}">
+                </div>
+            {% endfor %}
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Buscar</button>
+            </div>
+        </div>
+    </form>
+
+    {% if not solo_lectura and session['usuario_rol'] in ['admin', 'usuario'] %}
+        <div class="mb-3 text-end">
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#crearModal">Crear nuevo registro</button>
+        </div>
+    {% endif %}
+
+    <!-- Tabla -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-light">
+                <tr>
+                    {% for col in columnas %}
+                        <th>{{ col }}</th>
+                    {% endfor %}
+                    {% if claves and not solo_lectura and session['usuario_rol'] == 'admin' %}
+                        <th>Acciones</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in datos %}
+                    {% set id_compuesto = fila[claves[0]] | string %}
+                    {% for clave in claves[1:] %}
+                        {% set id_compuesto = id_compuesto ~ ',' ~ fila[clave] %}
+                    {% endfor %}
+
+                    <tr>
+                        {% for col in columnas %}
+                            <td>{{ fila[col] }}</td>
+                        {% endfor %}
+
+                        {% if claves and not solo_lectura and session['usuario_rol'] == 'admin' %}
+                            <td class="d-flex justify-content-center gap-2">
+                                <form method="post"
+                                      action="{{ url_for('routes.eliminar_registro', nombre_tabla=nombre_tabla, id=id_compuesto) }}"
+                                      onsubmit="return confirm('¿Estás seguro de eliminar este registro?');">
+                                    <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                                </form>
+
+                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#modalActualizar_{{ id_compuesto|replace(',', '_') }}">
+                                    Editar
+                                </button>
+                            </td>
+                        {% endif %}
+                    </tr>
+
+                    {% if not solo_lectura and session['usuario_rol'] == 'admin' %}
+                        <!-- Modal Actualización -->
+                        <div class="modal fade" id="modalActualizar_{{ id_compuesto|replace(',', '_') }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form method="post"
+                                          action="{{ url_for('routes.actualizar_registro', nombre_tabla=nombre_tabla, id=id_compuesto) }}">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Actualizar Registro</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            {% for col in columnas %}
+                                                <div class="mb-3">
+                                                    <label class="form-label">{{ col }}</label>
+                                                    <input type="text" class="form-control" name="{{ col }}"
+                                                           value="{{ fila[col] }}"
+                                                           {% if col in claves %}readonly{% endif %}>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-primary">Guardar</button>
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if not solo_lectura and session['usuario_rol'] in ['admin', 'usuario'] %}
+<!-- Modal Crear Registro -->
+<div class="modal fade" id="crearModal" tabindex="-1" aria-labelledby="crearModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <form method="post" action="{{ url_for('routes.crear_registro', nombre_tabla=nombre_tabla) }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="crearModalLabel">Crear nuevo registro en {{ nombre_tabla }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        {% for col in columnas %}
+                            {% if col not in claves %}
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ col }}</label>
+                                    <input type="text" name="{{ col }}" class="form-control" required>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Crear</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

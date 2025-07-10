@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5 text-center">
+    <h1>Bienvenido{% if session.get('usuario') %}, {{ session['usuario'] }}{% endif %}</h1>
+
+    {% if session.get('usuario_rol') == 'admin' %}
+        <h4 class="mt-4">Tablas disponibles</h4>
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+            {% for tabla in ['categories', 'customers', 'log_auditoria', 'order_details',
+                             'orders', 'payments', 'products', 'roles', 'usuarios'] %}
+                <a href="{{ url_for('routes.ver_tabla', nombre_tabla=tabla) }}" class="btn btn-outline-primary">
+                    {{ tabla }}
+                </a>
+            {% endfor %}
+        </div>
+
+        <h4 class="mt-4">Vistas disponibles</h4>
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+            {% for vista in ['auditoria_completa_ordenes', 'auditoria_ordenes_recientes',
+                             'auditoria_pagos_altos', 'historial_compras_clientes',
+                             'resumen_diario_ordenes', 'vista_log_auditoria',
+                             'vista_triggers_funciones'] %}
+                <a href="{{ url_for('routes.ver_vista', nombre_vista=vista) }}" class="btn btn-outline-success">
+                    {{ vista }}
+                </a>
+            {% endfor %}
+        </div>
+
+    {% elif session.get('usuario_rol') == 'auditor' %}
+        <h4 class="mt-4">Vistas de auditoría</h4>
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+            {% for vista in ['auditoria_completa_ordenes', 'auditoria_ordenes_recientes',
+                             'auditoria_pagos_altos', 'vista_log_auditoria'] %}
+                <a href="{{ url_for('routes.ver_vista', nombre_vista=vista) }}" class="btn btn-outline-warning">
+                    {{ vista }}
+                </a>
+            {% endfor %}
+        </div>
+
+    {% else %}
+        <p class="mt-4">Por favor, inicia sesión o regístrate para continuar.</p>
+        <a href="{{ url_for('routes.login') }}" class="btn btn-primary me-2">Iniciar sesión</a>
+        <a href="{{ url_for('routes.registro') }}" class="btn btn-secondary">Registrarse</a>
+    {% endif %}
+</div>
+{% endblock %}
